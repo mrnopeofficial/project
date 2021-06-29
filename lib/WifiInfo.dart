@@ -1,326 +1,477 @@
-import 'dart:async';
-import 'package:connectivity/connectivity.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:project/WifiInfo.dart';
-import 'package:overlay_support/overlay_support.dart';
-import 'Utils.dart';
+import 'package:flutter/services.dart';
+import 'package:wifi_iot/wifi_iot.dart';
+import 'dart:io' show Platform;
 
-class WifiInfo extends StatelessWidget{
-  static final String title='Sucure';
-  bool activated=false;
-  bool deactivated=false;
-  String SSID;
-  String SecurityType;
-  String LinkSpeed;
-  String IPv6;
-  String IPv4;
-  String NetworkBand;
-  String DriverVersion;
-  String MacAddress;
-  String Manufacturer;
-  String Description;
-  var tcVisibility=false;
-  WifiInfo(this.SSID,this.SecurityType,this.LinkSpeed,this.IPv6,this.IPv4,this.NetworkBand,this.DriverVersion,this.MacAddress,this.Manufacturer,this.Description);
+const String STA_DEFAULT_SSID = "STA_SSID";
+const String STA_DEFAULT_PASSWORD = "STA_PASSWORD";
+const NetworkSecurity STA_DEFAULT_SECURITY = NetworkSecurity.WPA;
+
+const String AP_DEFAULT_SSID = "AP_SSID";
+const String AP_DEFAULT_PASSWORD = "AP_PASSWORD";
+
+class FlutterWifiIoT extends StatefulWidget {
+  @override
+  _FlutterWifiIoTState createState() => _FlutterWifiIoTState();
+}
+
+class _FlutterWifiIoTState extends State<FlutterWifiIoT> {
+  String? _sPreviousAPSSID = "";
+  String? _sPreviousPreSharedKey = "";
+
+  List<WifiNetwork?>? _htResultNetwork;
+  Map<String, bool>? _htIsNetworkRegistered = Map();
+
+  bool _isEnabled = false;
+  bool _isConnected = false;
+  bool _isWiFiAPEnabled = false;
+  bool _isWiFiAPSSIDHidden = false;
+  bool _isWifiAPSupported = true;
+  bool _isWifiEnableOpenSettings = false;
+  bool _isWifiDisableOpenSettings = false;
+
+  final TextStyle textStyle = TextStyle(color: Colors.white);
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-        backgroundColor: Color.fromRGBO(252, 221, 236, 1),
-        body: Column(
-            children: [
-              SizedBox(height:60),
-              Container(
-                  height:35,
-                  width: MediaQuery
-                      .of(context)
-                      .size
-                      .width,
-                  decoration: BoxDecoration(
-                    color: Color.fromRGBO(233, 94, 94, 1),
-                  ),
-                  child: Text(
-                    'SUCURE', textAlign: TextAlign.left, style: TextStyle(
-                    color: Colors.white,
-                    fontFamily: 'Quando',
-                    fontSize: 22,
-                    letterSpacing: 0.5 /*percentages not used in flutter. defaulting to zero*/,
-                    fontWeight: FontWeight.normal,
-                  ),)
-              ),
-              Expanded(
-                child: Container(
-                  height: MediaQuery.of(context).size.height,
-                  width: double.infinity,
-                  child: ListView(
-                      scrollDirection: Axis.vertical,
-                      shrinkWrap: true,
-                      children: [
-                        Text(
-                          'Wifi list',
-                          style: TextStyle(
-                              fontFamily: 'AndikaNewBasic',
-                              fontSize: 22,
-                              fontWeight: FontWeight.normal),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(right: 25, left: 25),
-                          child: Divider(
-                            color: Colors.black,
-                            thickness:1.2,
-                          ),
-                        ),
-                        Padding(
-                            padding: const EdgeInsets.all(10),
-                            child: Row(
-                                children:[
-                                  Expanded(
-                                    child: Stack(
-                                        children: [
-                                          Text(
-                                            'SSID',
-                                            style: TextStyle(
-                                                fontFamily: 'AndikaNewBasic',
-                                                fontSize: 22,
-                                                fontWeight: FontWeight.normal),
-                                          ),
-                                          SizedBox(width:50),
-                                          Positioned(right:15,child : Text(SSID, textAlign: TextAlign.right, style: TextStyle(
-                                            color: Color.fromRGBO(0, 0, 0, 0.6000000238418579),
-                                            fontFamily: 'Quando',
-                                            fontSize: 21,
-                                            letterSpacing: 0 /*percentages not used in flutter. defaulting to zero*/,
-                                            fontWeight: FontWeight.normal,
-                                          ),))
-                                        ]
-                                    ),
-                                  ),
-                                ]
-                            )
-                        ),
-                        Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: Row(
-                                children:[
-                                  Expanded(
-                                    child: Stack(
-                                        children: [
-                                          Text(
-                                            'Security Type',
-                                            style: TextStyle(
-                                                fontFamily: 'AndikaNewBasic',
-                                                fontSize: 22,
-                                                fontWeight: FontWeight.normal),
-                                          ),
-                                          SizedBox(width:50),
-                                          Positioned(right:15,child : Text('WPA', textAlign: TextAlign.right, style: TextStyle(
-                                            color: Color.fromRGBO(0, 0, 0, 0.6000000238418579),
-                                            fontFamily: 'Quando',
-                                            fontSize: 21,
-                                            letterSpacing: 0 /*percentages not used in flutter. defaulting to zero*/,
-                                            fontWeight: FontWeight.normal,
-                                          ),))
-                                        ]
-                                    ),
-                                  ),
-                                ]
-                            )
-                        ),
-                        Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: Row(
-                                children:[
-                                  Expanded(
-                                    child: Stack(
-                                        children: [
-                                          Text(
-                                            'Linked Speed',
-                                            style: TextStyle(
-                                                fontFamily: 'AndikaNewBasic',
-                                                fontSize: 22,
-                                                fontWeight: FontWeight.normal),
-                                          ),
-                                          SizedBox(width:50),
-                                          Positioned(right:15,child : Text('54/54 (mbps)', textAlign: TextAlign.right, style: TextStyle(
-                                            color: Color.fromRGBO(0, 0, 0, 0.6000000238418579),
-                                            fontFamily: 'Quando',
-                                            fontSize: 21,
-                                            letterSpacing: 0 /*percentages not used in flutter. defaulting to zero*/,
-                                            fontWeight: FontWeight.normal,
-                                          ),))
-                                        ]
-                                    ),
-                                  ),
-                                ]
-                            )
-                        ),
-                        Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: Row(
-                                children:[
-                                  Expanded(
-                                    child: Stack(
-                                        children: [
-                                          Text(
-                                            'IPv6 address',
-                                            style: TextStyle(
-                                                fontFamily: 'AndikaNewBasic',
-                                                fontSize: 22,
-                                                fontWeight: FontWeight.normal),
-                                          ),
-                                          SizedBox(width:50),
-                                          Positioned(right:15,child : Text('fe80:7d49:9166:5bc7', textAlign: TextAlign.right, style: TextStyle(
-                                            color: Color.fromRGBO(0, 0, 0, 0.6000000238418579),
-                                            fontFamily: 'Quando',
-                                            fontSize: 21,
-                                            letterSpacing: 0 /*percentages not used in flutter. defaulting to zero*/,
-                                            fontWeight: FontWeight.normal,
-                                          ),))
-                                        ]
-                                    ),
+  initState() {
+    WiFiForIoTPlugin.isEnabled().then((val) {
+      _isEnabled = val;
+    });
 
-                                  ),
-                                ]
-                            )
-                        ),
-                        Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: Row(
-                                children:[
-                                  Expanded(
-                                    child: Stack(
-                                        children: [
-                                          Text(
-                                            'IPv4 address',
-                                            style: TextStyle(
-                                                fontFamily: 'AndikaNewBasic',
-                                                fontSize: 22,
-                                                fontWeight: FontWeight.normal),
-                                          ),
-                                          SizedBox(width:50),
-                                          Positioned(right:15,child : Text('192.168.0.122', textAlign: TextAlign.right, style: TextStyle(
-                                            color: Color.fromRGBO(0, 0, 0, 0.6000000238418579),
-                                            fontFamily: 'Quando',
-                                            fontSize: 21,
-                                            letterSpacing: 0 /*percentages not used in flutter. defaulting to zero*/,
-                                            fontWeight: FontWeight.normal,
-                                          ),))
-                                        ]
-                                    ),
-                                  ),
-                                ]
-                            )
-                        ),
-                        Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: Row(
-                                children:[
-                                  Expanded(
-                                    child: Stack(
-                                        children: [
-                                          Text(
-                                            'Network band',
-                                            style: TextStyle(
-                                                fontFamily: 'AndikaNewBasic',
-                                                fontSize: 22,
-                                                fontWeight: FontWeight.normal),
-                                          ),
-                                          SizedBox(width:50),
-                                          Positioned(right:15,child : Text('2.4 GHz', textAlign: TextAlign.right, style: TextStyle(
-                                            color: Color.fromRGBO(0, 0, 0, 0.6000000238418579),
-                                            fontFamily: 'Quando',
-                                            fontSize: 21,
-                                            letterSpacing: 0 /*percentages not used in flutter. defaulting to zero*/,
-                                            fontWeight: FontWeight.normal,
-                                          ),))
-                                        ]
-                                    ),
-                                  ),
-                                ]
-                            )
-                        ),
-                        Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: Row(
-                                children:[
-                                  Expanded(
-                                    child: Stack(
-                                        children: [
-                                          Text(
-                                            'Mac address',
-                                            style: TextStyle(
-                                                fontFamily: 'AndikaNewBasic',
-                                                fontSize: 22,
-                                                fontWeight: FontWeight.normal),
-                                          ),
-                                          SizedBox(width:50),
-                                          Positioned(right:15,child : Text('FC-F8-AE-17-EC-CE', textAlign: TextAlign.right, style: TextStyle(
-                                            color: Color.fromRGBO(0, 0, 0, 0.6000000238418579),
-                                            fontFamily: 'Quando',
-                                            fontSize: 21,
-                                            letterSpacing: 0 /*percentages not used in flutter. defaulting to zero*/,
-                                            fontWeight: FontWeight.normal,
-                                          ),))
-                                        ]
-                                    ),
-                                  ),
-                                ]
-                            )
-                        ),
-                        Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: Row(
-                                children:[
-                                  Expanded(
-                                    child: Stack(
-                                        children: [
-                                          Text(
-                                            'Description',
-                                            style: TextStyle(
-                                                fontFamily: 'AndikaNewBasic',
-                                                fontSize: 22,
-                                                fontWeight: FontWeight.normal),
-                                          ),
-                                          SizedBox(width:50),
-                                          Positioned(right:15,child : Text('Dual Band Wireless', textAlign: TextAlign.right, style: TextStyle(
-                                            color: Color.fromRGBO(0, 0, 0, 0.6000000238418579),
-                                            fontFamily: 'Quando',
-                                            fontSize: 21,
-                                            letterSpacing: 0 /*percentages not used in flutter. defaulting to zero*/,
-                                            fontWeight: FontWeight.normal,
-                                          ),))
-                                        ]
-                                    ),
-                                  ),
-                                ]
-                            )
-                        ),
-                      ]
-                  ),
-                ),
-              ),
+    WiFiForIoTPlugin.isConnected().then((val) {
+      _isConnected = val;
+    });
 
-              Visibility(
-                  visible: tcVisibility,
-                  child: Text(
-                    'Activated',
-                    style: TextStyle(color: Colors.red),
-                  )),
-              Row(children: [
-                SizedBox(width:135),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                      primary : Color.fromRGBO(233, 94, 94, 1),
-                      textStyle: const TextStyle(fontSize: 20),
+    WiFiForIoTPlugin.isWiFiAPEnabled().then((val) {
+      _isWiFiAPEnabled = val;
+    }).catchError((val) {
+      _isWifiAPSupported = false;
+    });
+
+    super.initState();
+  }
+
+  storeAndConnect(String psSSID, String psKey) async {
+    await storeAPInfos();
+    await WiFiForIoTPlugin.setWiFiAPSSID(psSSID);
+    await WiFiForIoTPlugin.setWiFiAPPreSharedKey(psKey);
+  }
+
+  storeAPInfos() async {
+    String? sAPSSID;
+    String? sPreSharedKey;
+
+    try {
+      sAPSSID = await WiFiForIoTPlugin.getWiFiAPSSID();
+    } on PlatformException {
+      sAPSSID = "";
+    }
+
+    try {
+      sPreSharedKey = await WiFiForIoTPlugin.getWiFiAPPreSharedKey();
+    } on PlatformException {
+      sPreSharedKey = "";
+    }
+
+    setState(() {
+      _sPreviousAPSSID = sAPSSID;
+      _sPreviousPreSharedKey = sPreSharedKey;
+    });
+  }
+
+  restoreAPInfos() async {
+    WiFiForIoTPlugin.setWiFiAPSSID(_sPreviousAPSSID!);
+    WiFiForIoTPlugin.setWiFiAPPreSharedKey(_sPreviousPreSharedKey!);
+  }
+
+  // [sAPSSID, sPreSharedKey]
+  Future<List<String>> getWiFiAPInfos() async {
+    String? sAPSSID;
+    String? sPreSharedKey;
+
+    try {
+      sAPSSID = await WiFiForIoTPlugin.getWiFiAPSSID();
+    } on Exception {
+      sAPSSID = "";
+    }
+
+    try {
+      sPreSharedKey = await WiFiForIoTPlugin.getWiFiAPPreSharedKey();
+    } on Exception {
+      sPreSharedKey = "";
+    }
+
+    return [sAPSSID!, sPreSharedKey!];
+  }
+
+  Future<WIFI_AP_STATE?> getWiFiAPState() async {
+    int? iWiFiState;
+
+    WIFI_AP_STATE? wifiAPState;
+
+    try {
+      iWiFiState = await WiFiForIoTPlugin.getWiFiAPState();
+    } on Exception {
+      iWiFiState = WIFI_AP_STATE.WIFI_AP_STATE_FAILED.index;
+    }
+
+    if (iWiFiState == WIFI_AP_STATE.WIFI_AP_STATE_DISABLING.index) {
+      wifiAPState = WIFI_AP_STATE.WIFI_AP_STATE_DISABLING;
+    } else if (iWiFiState == WIFI_AP_STATE.WIFI_AP_STATE_DISABLED.index) {
+      wifiAPState = WIFI_AP_STATE.WIFI_AP_STATE_DISABLED;
+    } else if (iWiFiState == WIFI_AP_STATE.WIFI_AP_STATE_ENABLING.index) {
+      wifiAPState = WIFI_AP_STATE.WIFI_AP_STATE_ENABLING;
+    } else if (iWiFiState == WIFI_AP_STATE.WIFI_AP_STATE_ENABLED.index) {
+      wifiAPState = WIFI_AP_STATE.WIFI_AP_STATE_ENABLED;
+    } else if (iWiFiState == WIFI_AP_STATE.WIFI_AP_STATE_FAILED.index) {
+      wifiAPState = WIFI_AP_STATE.WIFI_AP_STATE_FAILED;
+    }
+
+    return wifiAPState!;
+  }
+
+  Future<List<APClient>> getClientList(
+      bool onlyReachables, int reachableTimeout) async {
+    List<APClient> htResultClient;
+
+    try {
+      htResultClient = await WiFiForIoTPlugin.getClientList(
+          onlyReachables, reachableTimeout);
+    } on PlatformException {
+      htResultClient = <APClient>[];
+    }
+
+    return htResultClient;
+  }
+
+  Future<List<WifiNetwork>> loadWifiList() async {
+    List<WifiNetwork> htResultNetwork;
+    try {
+      htResultNetwork = await WiFiForIoTPlugin.loadWifiList();
+    } on PlatformException {
+      htResultNetwork = <WifiNetwork>[];
+    }
+
+    return htResultNetwork;
+  }
+
+  isRegisteredWifiNetwork(String ssid) async {
+    bool bIsRegistered;
+
+    try {
+      bIsRegistered = await WiFiForIoTPlugin.isRegisteredWifiNetwork(ssid);
+    } on PlatformException {
+      bIsRegistered = false;
+    }
+
+    setState(() {
+      _htIsNetworkRegistered![ssid] = bIsRegistered;
+    });
+  }
+
+  void showClientList() async {
+    /// Refresh the list and show in console
+    getClientList(false, 300).then((val) => val.forEach((oClient) {
+      print("************************");
+      print("Client :");
+      print("ipAddr = '${oClient.ipAddr}'");
+      print("hwAddr = '${oClient.hwAddr}'");
+      print("device = '${oClient.device}'");
+      print("isReachable = '${oClient.isReachable}'");
+      print("************************");
+    }));
+  }
+
+  Widget getWidgets() {
+    WiFiForIoTPlugin.isConnected().then((val) {
+      setState(() {
+        _isConnected = val;
+      });
+    });
+
+    // disable scanning for ios as not supported
+    if (_isConnected || Platform.isIOS) {
+      _htResultNetwork = null;
+    }
+
+    if (_htResultNetwork != null && _htResultNetwork!.length > 0) {
+      List<ListTile> htNetworks = <ListTile>[];
+
+      _htResultNetwork!.forEach((oNetwork) {
+        PopupCommand oCmdConnect = PopupCommand("Connect", oNetwork!.ssid!);
+        PopupCommand oCmdRemove = PopupCommand("Remove", oNetwork.ssid!);
+
+        List<PopupMenuItem<PopupCommand>> htPopupMenuItems = [];
+
+        htPopupMenuItems.add(
+          PopupMenuItem<PopupCommand>(
+            value: oCmdConnect,
+            child: const Text('Connect'),
+          ),
+        );
+
+        setState(() {
+          isRegisteredWifiNetwork(oNetwork.ssid!);
+          if (_htIsNetworkRegistered!.containsKey(oNetwork.ssid) &&
+              _htIsNetworkRegistered![oNetwork.ssid]!) {
+            htPopupMenuItems.add(
+              PopupMenuItem<PopupCommand>(
+                value: oCmdRemove,
+                child: const Text('Remove'),
+              ),
+            );
+          }
+
+          htNetworks.add(
+            ListTile(
+              title: Text("" +
+                  oNetwork.ssid! +
+                  ((_htIsNetworkRegistered!.containsKey(oNetwork.ssid) &&
+                      _htIsNetworkRegistered![oNetwork.ssid]!)
+                      ? " *"
+                      : "")),
+              trailing: PopupMenuButton<PopupCommand>(
+                padding: EdgeInsets.zero,
+                onSelected: (PopupCommand poCommand) {
+                  switch (poCommand.command) {
+                    case "Connect":
+                      WiFiForIoTPlugin.connect(STA_DEFAULT_SSID,
+                          password: STA_DEFAULT_PASSWORD,
+                          joinOnce: true,
+                          security: STA_DEFAULT_SECURITY);
+                      break;
+                    case "Remove":
+                      WiFiForIoTPlugin.removeWifiNetwork(poCommand.argument);
+                      break;
+                    default:
+                      break;
+                  }
+                },
+                itemBuilder: (BuildContext context) => htPopupMenuItems,
+              ),
+            ),
+          );
+        });
+      });
+
+      return ListView(
+        padding: kMaterialListPadding,
+        children: htNetworks,
+      );
+    } else {
+      return SingleChildScrollView(
+        child: SafeArea(
+          child: Column(
+            children: Platform.isIOS
+                ? getButtonWidgetsForiOS()
+                : getButtonWidgetsForAndroid(),
+          ),
+        ),
+      );
+    }
+  }
+
+  List<Widget> getButtonWidgetsForAndroid() {
+    List<Widget> htPrimaryWidgets = <Widget>[];
+
+    WiFiForIoTPlugin.isEnabled().then((val) {
+      setState(() {
+        _isEnabled = val;
+      });
+    });
+
+    if (_isEnabled) {
+      htPrimaryWidgets.addAll([
+        SizedBox(height: 20),
+        Text("WIFI DETAILS",
+          style: TextStyle(fontSize: 35),
+        ),
+      ]);
+
+      WiFiForIoTPlugin.isConnected().then((val) {
+        setState(() {
+          _isConnected = val;
+        });
+      });
+
+      if (_isConnected) {
+        htPrimaryWidgets.addAll(<Widget>[
+          SizedBox(height: 50),
+          FutureBuilder(
+              future: WiFiForIoTPlugin.getSSID(),
+              initialData: "Loading..",
+              builder: (BuildContext context, AsyncSnapshot<String?> ssid) {
+                return Text("SSID: ${ssid.data}",
+                    style: TextStyle(fontSize: 20),
+                );
+              }),
+          FutureBuilder(
+              future: WiFiForIoTPlugin.getBSSID(),
+              initialData: "Loading..",
+              builder: (BuildContext context, AsyncSnapshot<String?> bssid) {
+                return Text("BSSID: ${bssid.data}",
+                  style: TextStyle(fontSize: 20),
+                );
+              }),
+          FutureBuilder(
+              future: WiFiForIoTPlugin.getCurrentSignalStrength(),
+              initialData: 0,
+              builder: (BuildContext context, AsyncSnapshot<int?> signal) {
+                return Text("Signal: ${signal.data}",
+                  style: TextStyle(fontSize: 20),
+                );
+              }),
+          FutureBuilder(
+              future: WiFiForIoTPlugin.getFrequency(),
+              initialData: 0,
+              builder: (BuildContext context, AsyncSnapshot<int?> freq) {
+                return Text("Frequency : ${freq.data}",
+                  style: TextStyle(fontSize: 20),
+                );
+              }),
+          FutureBuilder(
+              future: WiFiForIoTPlugin.getIP(),
+              initialData: "Loading..",
+              builder: (BuildContext context, AsyncSnapshot<String?> ip) {
+                return Text("IP : ${ip.data}",
+                  style: TextStyle(fontSize: 20),
+                );
+              }),
+          SizedBox(height: 20),
+          Row(children: [
+            SizedBox(width:135),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                  primary : Color.fromRGBO(233, 94, 94, 1),
+                  textStyle: const TextStyle(fontSize: 20),
                   padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10)),
-                  onPressed: () {
-                    tcVisibility=true;
-                  },
-                  child: const Text('Activate'),
-                ),
-              ],)
-            ]
-        )
+              onPressed: () {
+              },
+              child: const Text('Activate'),
+            ),
+          ],)
+        ]);
+      }
+    }
+
+    htPrimaryWidgets.add(Divider(
+      height: 32.0,
+    ));
+    return htPrimaryWidgets;
+  }
+
+  List<Widget> getButtonWidgetsForiOS() {
+    List<Widget> htPrimaryWidgets = <Widget>[];
+
+    WiFiForIoTPlugin.isEnabled().then((val) => setState(() {
+      _isEnabled = val;
+    }));
+
+    if (_isEnabled) {
+      htPrimaryWidgets.add(Text("Wifi Enabled"));
+      WiFiForIoTPlugin.isConnected().then((val) => setState(() {
+        _isConnected = val;
+      }));
+
+      String? _sSSID;
+
+      if (_isConnected) {
+        htPrimaryWidgets.addAll(<Widget>[
+          Text("Connected"),
+          FutureBuilder(
+              future: WiFiForIoTPlugin.getSSID(),
+              initialData: "Loading..",
+              builder: (BuildContext context, AsyncSnapshot<String?> ssid) {
+                _sSSID = ssid.data;
+
+                return Text("SSID: ${ssid.data}");
+              }),
+        ]);
+
+        if (_sSSID == STA_DEFAULT_SSID) {
+          htPrimaryWidgets.addAll(<Widget>[
+            MaterialButton(
+              color: Colors.blue,
+              child: Text("Disconnect", style: textStyle),
+              onPressed: () {
+                WiFiForIoTPlugin.disconnect();
+              },
+            ),
+          ]);
+        } else {
+          htPrimaryWidgets.addAll(<Widget>[
+            MaterialButton(
+              color: Colors.blue,
+              child: Text("Connect to '$AP_DEFAULT_SSID'", style: textStyle),
+              onPressed: () {
+                WiFiForIoTPlugin.connect(STA_DEFAULT_SSID,
+                    password: STA_DEFAULT_PASSWORD,
+                    joinOnce: true,
+                    security: NetworkSecurity.WPA);
+              },
+            ),
+          ]);
+        }
+      } else {
+        htPrimaryWidgets.addAll(<Widget>[
+          Text("Disconnected"),
+          MaterialButton(
+            color: Colors.blue,
+            child: Text("Connect to '$AP_DEFAULT_SSID'", style: textStyle),
+            onPressed: () {
+              WiFiForIoTPlugin.connect(STA_DEFAULT_SSID,
+                  password: STA_DEFAULT_PASSWORD,
+                  joinOnce: true,
+                  security: NetworkSecurity.WPA);
+            },
+          ),
+        ]);
+      }
+    } else {
+      htPrimaryWidgets.addAll(<Widget>[
+        Text("Wifi Disabled?"),
+        MaterialButton(
+          color: Colors.blue,
+          child: Text("Connect to '$AP_DEFAULT_SSID'", style: textStyle),
+          onPressed: () {
+            WiFiForIoTPlugin.connect(STA_DEFAULT_SSID,
+                password: STA_DEFAULT_PASSWORD,
+                joinOnce: true,
+                security: NetworkSecurity.WPA);
+          },
+        ),
+      ]);
+    }
+
+    return htPrimaryWidgets;
+  }
+
+  @override
+  Widget build(BuildContext poContext) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: Platform.isIOS ?
+      "Sucure" : "Sucure",
+      theme: ThemeData(
+          appBarTheme: AppBarTheme(
+            color: Color.fromRGBO(233, 94, 94, 1),
+          )),
+      home: Scaffold(
+        backgroundColor: Color.fromRGBO(252, 221, 236, 1),
+        appBar: AppBar(
+          title: Platform.isIOS
+              ? Text('SUCURE')
+              : Text('SUCURE'),
+        ),
+        body: getWidgets(),
+      ),
     );
   }
+}
+
+class PopupCommand {
+  String command;
+  String argument;
+
+  PopupCommand(this.command, this.argument);
 }
