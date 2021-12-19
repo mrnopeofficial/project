@@ -1,6 +1,6 @@
 # project
 
-A mobile application frontend for a security company
+Sucure - A mobile application frontend to scan available Wi-Fi around the area to display Wi-Fi info and establish secured connection with selected Wi-Fi.
 
 ## Getting Started
 
